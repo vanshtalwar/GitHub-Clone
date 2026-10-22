@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { FallbackNoticeContext } from '../../hooks/useFallbackNotice';
 import { mockUser } from '../../mocks/profile';
@@ -93,13 +93,14 @@ describe('ContributionsSection', () => {
       </FallbackNoticeContext>,
     );
     await screen.findByRole('heading', { name: /contributions in the last year/ });
-    expect(report).toHaveBeenLastCalledWith('contributions:shreeramk', { rateLimited: false });
+    expect(report).toHaveBeenCalledWith('contributions:shreeramk', { rateLimited: false });
+    await waitFor(() => expect(report).toHaveBeenCalledWith('activity:shreeramk', { rateLimited: false }));
   });
 
   it('shows the activity overview inside the graph box until it is turned off in the settings', async () => {
     stubContributions();
     renderInProfile(<ContributionsSection username="shreeramk" />);
-    expect(screen.getByRole('heading', { name: 'Activity overview' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Activity overview' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Contribution settings/ }));
     fireEvent.click(screen.getByRole('checkbox', { name: /Activity overview/ }));
@@ -111,5 +112,27 @@ describe('ContributionsSection', () => {
     const profile = readyProfile({ user: { ...mockUser, login: 'octo' } });
     renderInProfile(<ContributionsSection username="octo" />, { profile, url: '/octo' });
     expect(await screen.findByText('Contribution data couldn’t be loaded right now.')).toBeInTheDocument();
+  });
+
+  it('shows live activity for other users', async () => {
+    stubFetch((url) =>
+      url.startsWith('/.netlify/functions/activity')
+        ? jsonResponse({
+            overview: {
+              orgs: [],
+              contributedTo: ['octo/tool'],
+              otherRepoCount: 0,
+              breakdown: { commits: 100, pullRequests: 0, issues: 0, codeReview: 0 },
+            },
+            months: [{ monthsAgo: 0, month: '2026-10', items: [{ kind: 'commits', repos: [{ name: 'octo/tool', count: 4 }] }] }],
+          })
+        : undefined,
+    );
+    const profile = readyProfile({ user: { ...mockUser, login: 'octo' }, extras: null });
+    renderInProfile(<ContributionsSection username="octo" />, { profile, url: '/octo' });
+
+    expect(await screen.findByRole('heading', { name: 'Created 4 commits in 1 repository' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Activity overview' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'octo/tool' })).toBeInTheDocument();
   });
 });

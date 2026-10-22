@@ -3,7 +3,7 @@ import type { ReactElement } from 'react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import type { ProfileData, ProfileState } from '../context/loadProfile';
 import { ProfileContext } from '../hooks/useProfile';
-import { mockExtras, mockOrgs, mockRepos, mockSocials, mockStarredCount, mockUser } from '../mocks/profile';
+import { mockDetails, mockExtras, mockOrgs, mockRepos, mockSocials, mockStarredCount, mockUser } from '../mocks/profile';
 
 /** A ready profile built from the mock data (shreeramk, with sample-data extras) unless overridden. */
 export function readyProfile(overrides: Partial<ProfileData> = {}): ProfileState {
@@ -14,6 +14,8 @@ export function readyProfile(overrides: Partial<ProfileData> = {}): ProfileState
     socials: mockSocials,
     orgs: mockOrgs,
     starredCount: mockStarredCount,
+    userStatus: mockDetails.status,
+    projects: mockDetails.projects,
     extras: mockExtras('shreeramk'),
     ...overrides,
   };

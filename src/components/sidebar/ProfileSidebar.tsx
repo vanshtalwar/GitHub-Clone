@@ -1,4 +1,4 @@
-import { LinkIcon, LocationIcon, MailIcon, OrganizationIcon, PeopleIcon } from '@primer/octicons-react';
+import { LinkIcon, LocationIcon, MailIcon, OrganizationIcon, PeopleIcon, SmileyIcon } from '@primer/octicons-react';
 import { githubUrl } from '../../../shared/github';
 import { useProfile } from '../../hooks/useProfile';
 import type { GithubUser } from '../../types/github';
@@ -12,15 +12,16 @@ import { Organizations } from './Organizations';
 import styles from './ProfileSidebar.module.css';
 
 /**
- * Left panel: everything here comes from GET /users/{username} (requirement 3b), except the status and achievements,
- * which have no public API and come from `extras` (null when there's no sample data for the user).
+ * Left panel: everything here comes from GET /users/{username} (requirement 3b), except the status (GraphQL, through
+ * the profile details function) and the achievements, which have no API and come from `extras` (sample data).
  */
 export function ProfileSidebar() {
   const profile = useProfile();
   if (profile.status !== 'ready') return <SidebarSkeleton />;
 
-  const { user, socials, orgs, extras } = profile;
-  const status = extras?.status;
+  const { user, socials, orgs, extras, userStatus: status } = profile;
+  // GitHub shows a smiley when the status has no emoji (or a custom one, which isn't a character)
+  const emoji = status?.emoji ? <span aria-hidden="true">{status.emoji}</span> : <SmileyIcon />;
 
   return (
     <div className={styles.sidebar}>
@@ -37,7 +38,7 @@ export function ProfileSidebar() {
           </a>
           {status && (
             <div className={styles.statusBubble} title={status.message}>
-              <span aria-hidden="true">{status.emoji}</span>
+              {emoji}
               <span className="sr-only">Status: {status.message}</span>
             </div>
           )}
@@ -51,7 +52,7 @@ export function ProfileSidebar() {
       {/* Phones show the status as a line instead of the bubble; only one of the two is ever displayed. */}
       {status && (
         <p className={styles.statusLine}>
-          <span aria-hidden="true">{status.emoji}</span>
+          {emoji}
           <span className="sr-only">Status: </span>
           {status.message}
         </p>

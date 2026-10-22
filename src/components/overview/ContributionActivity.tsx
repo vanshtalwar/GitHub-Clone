@@ -1,19 +1,27 @@
-import { FoldIcon, GitPullRequestIcon, RepoPushIcon, UnfoldIcon, type Icon } from '@primer/octicons-react';
+import { FoldIcon, GitPullRequestIcon, LockIcon, RepoPushIcon, UnfoldIcon, type Icon } from '@primer/octicons-react';
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { githubUrl } from '../../../shared/github';
 import { DOCS_URLS } from '../../config';
-import type { ActivityItem, ActivityMonth, CommitActivity, PullRequestActivity } from '../../types/activity';
+import type { ActivityItem, ActivityMonth, CommitActivity, PrivateActivity, PullRequestActivity } from '../../types/activity';
 import type { ContributionPeriod } from '../../types/github';
 import { pluralize } from '../../utils/format';
-import { activityMonth } from '../../utils/period';
+import { activityMonth, calendarMonth } from '../../utils/period';
+import { Skeleton } from '../common/Skeleton';
 import styles from './ContributionActivity.module.css';
 
 /**
- * "Contribution activity" timeline. No public API provides it (the Events API no longer carries commit counts or
- * PR merge state, and private contributions aren't public), so `months` comes from the profile's sample data and
- * is null for users without it. Months are counted back from the selected period.
+ * "Contribution activity" timeline, newest month first (live from GitHub's GraphQL API, or the design's sample data
+ * for shreeramk). `months` is undefined while loading and null if it couldn't be loaded.
  */
-export function ContributionActivity({ months, period }: { months: ActivityMonth[] | null; period: ContributionPeriod }) {
+export function ContributionActivity({
+  months,
+  period,
+  login,
+}: {
+  months: ActivityMonth[] | null | undefined;
+  period: ContributionPeriod;
+  login: string;
+}) {
   const [visibleMonths, setVisibleMonths] = useState(1);
   const monthHeadings = useRef<(HTMLHeadingElement | null)[]>([]);
   const revealed = useRef(false);
@@ -23,17 +31,18 @@ export function ContributionActivity({ months, period }: { months: ActivityMonth
     if (revealed.current) monthHeadings.current[visibleMonths - 1]?.focus();
   }, [visibleMonths]);
 
-  if (!months) {
+  if (!months || months.length === 0) {
     return (
-      <section aria-labelledby="activity-heading" className={styles.section}>
+      <section aria-labelledby="activity-heading" className={styles.section} aria-busy={months === undefined}>
         <h2 id="activity-heading" className={styles.heading}>
           Contribution activity
         </h2>
-        <p className={styles.note}>Activity details aren’t available here: GitHub’s public API doesn’t include them.</p>
+        {months === undefined && <Skeleton height={64} className={styles.loading} />}
+        {months === null && <p className={styles.note}>Contribution activity couldn’t be loaded right now.</p>}
+        {months?.length === 0 && <p className={styles.empty}>{login} has no activity yet for this period.</p>}
       </section>
     );
   }
-
 
   return (
     <section aria-labelledby="activity-heading" className={styles.section}>
@@ -42,7 +51,8 @@ export function ContributionActivity({ months, period }: { months: ActivityMonth
       </h2>
 
       {months.slice(0, visibleMonths).map((month, i) => {
-        const { month: name, year } = activityMonth(period, month.monthsAgo);
+        // Live months carry their own date; sample months are placed relative to the selected period
+        const { month: name, year } = month.month ? calendarMonth(month.month) : activityMonth(period, month.monthsAgo);
         return (
           <div key={month.monthsAgo} className={styles.month}>
             <h3
@@ -84,6 +94,7 @@ export function ContributionActivity({ months, period }: { months: ActivityMonth
 }
 
 function ActivityEntry({ item }: { item: ActivityItem }) {
+  if (item.kind === 'private') return <PrivateEntry item={item} />;
   if (item.kind === 'commits') {
     const total = item.repos.reduce((sum, repo) => sum + repo.count, 0);
     return (
@@ -96,7 +107,7 @@ function ActivityEntry({ item }: { item: ActivityItem }) {
       </TimelineItem>
     );
   }
-  const total = item.repos.reduce((sum, repo) => sum + repo.merged + repo.open, 0);
+  const total = item.repos.reduce((sum, repo) => sum + repo.merged + repo.open + repo.closed, 0);
   return (
     <TimelineItem
       icon={GitPullRequestIcon}
@@ -105,6 +116,22 @@ function ActivityEntry({ item }: { item: ActivityItem }) {
     >
       <PullRequestList item={item} />
     </TimelineItem>
+  );
+}
+
+/** "N contributions in private repositories": GitHub only reveals the count, so there's nothing to expand. */
+function PrivateEntry({ item }: { item: PrivateActivity }) {
+  return (
+    <li className={styles.item}>
+      <span className={styles.badge}>
+        <LockIcon />
+      </span>
+      <div className={styles.itemBody}>
+        <div className={styles.itemHeader}>
+          <h4 className={styles.itemTitle}>{pluralize(item.count, 'contribution')} in private repositories</h4>
+        </div>
+      </div>
+    </li>
   );
 }
 
@@ -188,6 +215,11 @@ function PullRequestList({ item }: { item: PullRequestActivity }) {
             {repo.open > 0 && (
               <span>
                 <span className={`${styles.count} ${styles.open}`}>{repo.open}</span> open
+              </span>
+            )}
+            {repo.closed > 0 && (
+              <span>
+                <span className={`${styles.count} ${styles.closed}`}>{repo.closed}</span> closed
               </span>
             )}
           </span>

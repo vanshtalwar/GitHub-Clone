@@ -1,7 +1,8 @@
-// "Activity overview" and "Contribution activity" data. Always mock: the Events API no longer includes commit
-// counts or PR merge state, and private contributions aren't public.
+// The design's "Activity overview" and "Contribution activity" for shreeramk. Live activity comes from GitHub's
+// GraphQL API (server/githubActivity.ts), but all of shreeramk's contributions are in private repositories, which
+// GitHub only itemises for the owner, and the design is the owner's view; so for shreeramk this is shown instead.
 // Month 0 copies the screenshot; older months exist so "Show more activity" has something to reveal.
-import type { ActivityMonth, ActivityOverview } from '../types/activity';
+import type { ActivityData, ActivityMonth, ActivityOverview } from '../types/activity';
 
 export const mockActivityOverview: ActivityOverview = {
   orgs: [
@@ -37,11 +38,11 @@ export const mockActivityMonths: ActivityMonth[] = [
       {
         kind: 'pullRequests',
         repos: [
-          { name: 'UptimeAI/uptime_webapp', merged: 16, open: 1 },
-          { name: 'UptimeAI/uptime_ml', merged: 6, open: 0 },
-          { name: 'UptimeAI/uptime_scripts', merged: 4, open: 0 },
-          { name: 'UptimeAI/uptime_engine', merged: 1, open: 0 },
-          { name: 'UptimeAI/uptime_ml_encrypted', merged: 1, open: 0 },
+          { name: 'UptimeAI/uptime_webapp', merged: 16, open: 1, closed: 0 },
+          { name: 'UptimeAI/uptime_ml', merged: 6, open: 0, closed: 0 },
+          { name: 'UptimeAI/uptime_scripts', merged: 4, open: 0, closed: 0 },
+          { name: 'UptimeAI/uptime_engine', merged: 1, open: 0, closed: 0 },
+          { name: 'UptimeAI/uptime_ml_encrypted', merged: 1, open: 0, closed: 0 },
         ],
       },
     ],
@@ -64,10 +65,10 @@ export const mockActivityMonths: ActivityMonth[] = [
       {
         kind: 'pullRequests',
         repos: [
-          { name: 'UptimeAI/uptime_webapp', merged: 9, open: 0 },
-          { name: 'UptimeAI/uptime_server', merged: 5, open: 0 },
-          { name: 'UptimeAI/uptime_ml', merged: 3, open: 0 },
-          { name: 'UptimeAI/uptime_engine', merged: 1, open: 0 },
+          { name: 'UptimeAI/uptime_webapp', merged: 9, open: 0, closed: 0 },
+          { name: 'UptimeAI/uptime_server', merged: 5, open: 0, closed: 0 },
+          { name: 'UptimeAI/uptime_ml', merged: 3, open: 0, closed: 0 },
+          { name: 'UptimeAI/uptime_engine', merged: 1, open: 0, closed: 0 },
         ],
       },
     ],
@@ -89,11 +90,13 @@ export const mockActivityMonths: ActivityMonth[] = [
       {
         kind: 'pullRequests',
         repos: [
-          { name: 'UptimeAI/uptime_ml', merged: 6, open: 0 },
-          { name: 'UptimeAI/uptime_webapp', merged: 4, open: 0 },
-          { name: 'UptimeAI/uptime_server', merged: 2, open: 0 },
+          { name: 'UptimeAI/uptime_ml', merged: 6, open: 0, closed: 0 },
+          { name: 'UptimeAI/uptime_webapp', merged: 4, open: 0, closed: 0 },
+          { name: 'UptimeAI/uptime_server', merged: 2, open: 0, closed: 0 },
         ],
       },
     ],
   },
 ];
+
+export const mockActivity: ActivityData = { overview: mockActivityOverview, months: mockActivityMonths };

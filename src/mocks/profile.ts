@@ -1,8 +1,7 @@
 // Values copied from the assignment screenshot (design/00-design-from-pdf.jpg).
 // The first group is the fallback when a GitHub API call fails; the second group has no public API at all.
 // Everything here describes shreeramk only, so it's never shown for another user (see hasMockProfile).
-import type { Achievement, GithubUser, Org, ProfileExtras, Repo, SocialAccount, UserStatus } from '../types/github';
-import { mockActivityMonths, mockActivityOverview } from './activity';
+import type { Achievement, GithubUser, Org, ProfileDetails, ProfileExtras, Repo, SocialAccount } from '../types/github';
 
 /** True if the mock data describes this user. Other users never get mock data. */
 export function hasMockProfile(username: string): boolean {
@@ -88,11 +87,15 @@ export const mockOrgs: Org[] = [
 
 export const mockStarredCount = 6;
 
-// No public API for these: always mock.
+/** The status and (no) projects from the design, if the profile details function can't be reached. */
+export const mockDetails: ProfileDetails = {
+  status: { emoji: '🎯', message: 'Focusing' },
+  projects: { totalCount: 0, items: [] },
+};
+
+// No usable public API for these: always mock.
 
 export const mockPackagesCount = 5;
-
-export const mockStatus: UserStatus = { emoji: '🎯', message: 'Focusing' };
 
 /** The three badges in the design screenshot (images in public/achievements/). */
 export const mockAchievements: Achievement[] = [
@@ -101,13 +104,8 @@ export const mockAchievements: Achievement[] = [
   { name: 'Pull Shark', image: '/achievements/pull-shark.png', tier: 'x4' },
 ];
 
-/** The parts with no public API (status, achievements, packages, activity), for users we have sample data for. */
+/** The parts with no usable public API (achievements, packages count), for users we have sample data for. */
 export function mockExtras(username: string): ProfileExtras | null {
   if (!hasMockProfile(username)) return null;
-  return {
-    status: mockStatus,
-    achievements: mockAchievements,
-    packagesCount: mockPackagesCount,
-    activity: { overview: mockActivityOverview, months: mockActivityMonths },
-  };
+  return { achievements: mockAchievements, packagesCount: mockPackagesCount };
 }

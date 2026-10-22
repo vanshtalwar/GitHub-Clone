@@ -8,7 +8,7 @@ export function PackagesPage() {
         Packages
       </h2>
       <Blankslate icon={PackageIcon} title="No packages to show">
-        <p>GitHub’s API only lists a user’s packages with an access token.</p>
+        <p>GitHub’s API only lists packages to classic access tokens with package permissions.</p>
       </Blankslate>
     </section>
   );

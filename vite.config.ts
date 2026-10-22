@@ -2,31 +2,24 @@ import react from '@vitejs/plugin-react';
 import type { Connect, Plugin } from 'vite';
 import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
-import { contributionsHeaders, getContributionCalendar, parseAllowedUsers } from './server/githubContributions.ts';
+import { handleActivity } from './server/githubActivity.ts';
+import { handleContributions } from './server/githubContributions.ts';
+import { serverOptions, type HttpResponse } from './server/githubGraphql.ts';
+import { handleProfileDetails } from './server/githubProfile.ts';
 import { getGithubRest } from './server/githubRest.ts';
-import { CONTRIBUTIONS_PATH, GITHUB_REST_PATH } from './shared/github.ts';
-
-interface FunctionResponse {
-  status: number;
-  body: string;
-  headers: Record<string, string>;
-}
+import { ACTIVITY_PATH, CONTRIBUTIONS_PATH, GITHUB_REST_PATH, PROFILE_DETAILS_PATH } from './shared/github.ts';
 
 /**
  * Serves the Netlify Functions locally (npm run dev / npm run preview), so the app behaves as on Netlify.
  * The token comes from GITHUB_TOKEN in the environment or .env / .env.local and stays in this Node process.
  */
 function netlifyFunctions(env: Record<string, string>): Plugin {
-  const token = env.GITHUB_TOKEN;
-  const functions: Record<string, (params: URLSearchParams) => Promise<FunctionResponse>> = {
-    [CONTRIBUTIONS_PATH]: async (params) => {
-      const result = await getContributionCalendar(params, {
-        token,
-        allowedUsers: parseAllowedUsers(env.CONTRIBUTIONS_ALLOWED_USERS),
-      });
-      return { status: result.status, body: JSON.stringify(result.body), headers: contributionsHeaders(result) };
-    },
-    [GITHUB_REST_PATH]: (params) => getGithubRest(params.get('path') ?? '', { token }),
+  const options = serverOptions(env);
+  const functions: Record<string, (params: URLSearchParams) => Promise<HttpResponse>> = {
+    [CONTRIBUTIONS_PATH]: (params) => handleContributions(params, options),
+    [ACTIVITY_PATH]: (params) => handleActivity(params, options),
+    [PROFILE_DETAILS_PATH]: (params) => handleProfileDetails(params, options),
+    [GITHUB_REST_PATH]: (params) => getGithubRest(params.get('path') ?? '', { token: options.token }),
   };
 
   const register = ({ middlewares }: { middlewares: Connect.Server }) => {

@@ -1,8 +1,13 @@
 // Domain types used by the UI. The API clients map GitHub's snake_case responses into these,
 // so components never depend on raw API shapes.
-import type { ActivityMonth, ActivityOverview } from './activity';
-
-export type { ContributionCalendar, ContributionDay, ContributionLevel } from '../../shared/github';
+export type {
+  ContributionCalendar,
+  ContributionDay,
+  ContributionLevel,
+  ProfileDetails,
+  Project,
+  UserStatus,
+} from '../../shared/github';
 
 /** Where a piece of data came from: the live API, or mock data used as a fallback. */
 export type DataSource = 'live' | 'mock';
@@ -54,12 +59,6 @@ export interface Org {
   avatarUrl: string;
 }
 
-/** Status message shown on the avatar. GraphQL-only on GitHub. */
-export interface UserStatus {
-  emoji: string;
-  message: string;
-}
-
 /** Profile achievement badge. No public API. */
 export interface Achievement {
   name: string;
@@ -70,14 +69,13 @@ export interface Achievement {
 }
 
 /**
- * Profile parts with no usable public API. Only available where sample data exists (shreeramk);
- * null for everyone else, and the UI then leaves those parts out.
+ * Profile parts with no usable public API: achievements have none, and GitHub only lists packages to classic tokens
+ * with package access. Only available where sample data exists (shreeramk); null for everyone else, and the UI then
+ * leaves those parts out.
  */
 export interface ProfileExtras {
-  status: UserStatus;
   achievements: Achievement[];
   packagesCount: number;
-  activity: { overview: ActivityOverview; months: ActivityMonth[] };
 }
 
 /** "last" is the rolling last year (GitHub's default view); a number is that calendar year. */

@@ -1,10 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import {
-  CONTRIBUTIONS_QUERY,
-  contributionsHeaders,
-  getContributionCalendar,
-  parseAllowedUsers,
-} from './githubContributions.ts';
+import { CONTRIBUTIONS_QUERY, getContributionCalendar } from './githubContributions.ts';
+import { parseAllowedUsers, resultHeaders } from './githubGraphql.ts';
+
+const contributionsHeaders = (result: Parameters<typeof resultHeaders>[0]) => resultHeaders(result, ['user', 'y']);
 
 function graphqlResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(typeof body === 'string' ? body : JSON.stringify(body), {
@@ -147,7 +145,7 @@ describe('getContributionCalendar', () => {
   });
 });
 
-describe('contributionsHeaders / parseAllowedUsers', () => {
+describe('resultHeaders / parseAllowedUsers', () => {
   it('caches successful calendars and nothing else', () => {
     expect(contributionsHeaders({ status: 200, body: { total: 0, days: [], from: '', to: '' } })['Netlify-CDN-Cache-Control']).toContain(
       's-maxage=3600',

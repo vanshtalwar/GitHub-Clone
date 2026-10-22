@@ -43,6 +43,11 @@ describe('ProfileSidebar', () => {
     expect(screen.getByRole('img', { name: '@UptimeAI' })).toBeInTheDocument();
   });
 
+  it('shows a live status without an emoji character next to a smiley icon, as GitHub does', () => {
+    renderInProfile(<ProfileSidebar />, { profile: readyProfile({ userStatus: { emoji: '', message: 'Shipping' } }) });
+    expect(screen.getAllByText('Status: Shipping', { exact: false }).length).toBeGreaterThan(0);
+  });
+
   it('shows only API data for other users, and hides empty sections', () => {
     const profile = readyProfile({
       user: {
@@ -56,6 +61,7 @@ describe('ProfileSidebar', () => {
       },
       socials: [],
       orgs: [],
+      userStatus: null,
       extras: null,
     });
     renderInProfile(<ProfileSidebar />, { profile, url: '/octo' });

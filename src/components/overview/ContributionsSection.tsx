@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useSearchParams } from 'react-router';
 import { STORAGE_PREFIX } from '../../config';
+import { useActivity } from '../../hooks/useActivity';
 import { useContributions, type ReadyContributions } from '../../hooks/useContributions';
 import { useFallbackNotice } from '../../hooks/useFallbackNotice';
 import { useProfile } from '../../hooks/useProfile';
@@ -28,7 +29,6 @@ export function ContributionsSection({ username }: { username: string }) {
   const thisYear = currentYear();
   const period = parsePeriod(searchParams.get('year'), thisYear);
   const years = profile.status === 'ready' ? profileYears(profile.user.createdAt, thisYear) : [];
-  const activity = profile.status === 'ready' ? (profile.extras?.activity ?? null) : null;
   const [showOverview, setShowOverview] = useStoredBoolean(SHOW_OVERVIEW_KEY, true);
 
   // Download the chart code while the calendar data loads, rather than after it.
@@ -39,6 +39,17 @@ export function ContributionsSection({ username }: { username: string }) {
     state.status === 'ready' ? state : state.status === 'loading' ? state.previous : undefined;
   // Pass the state's own failure object: a new object each render would re-report on every render.
   useFallbackNotice(`contributions:${username}`, shown?.source === 'mock' ? (shown.failure ?? null) : null);
+
+  const activityState = useActivity(username, period);
+  const activity = activityState.status === 'ready' ? activityState.activity : null;
+  useFallbackNotice(
+    `activity:${username}`,
+    activityState.status === 'ready' && activityState.source === 'mock' ? (activityState.failure ?? null) : null,
+  );
+  // Without public contributions there are no shares to draw (e.g. a user whose activity is all private)
+  const overview =
+    showOverview && activity && Object.values(activity.overview.breakdown).some((share) => share > 0) ? activity.overview : null;
+  const login = profile.status === 'ready' ? profile.user.login : username;
 
   // Describes the calendar on screen, so while another period loads the heading still matches the (dimmed) graph.
   const heading = shown ? `${pluralize(shown.calendar.total, 'contribution')} in ${describePeriod(shown.period)}` : null;
@@ -58,10 +69,15 @@ export function ContributionsSection({ username }: { username: string }) {
           ) : (
             <ContributionGraph calendar={shown?.calendar ?? null} busy={state.status === 'loading' && !!shown} />
           )}
-          {showOverview && activity && <ActivityOverview overview={activity.overview} />}
+          {overview && <ActivityOverview overview={overview} />}
         </div>
         {/* Keyed by period, so "Show more activity" starts over when the year changes */}
-        <ContributionActivity key={String(period)} months={activity?.months ?? null} period={period} />
+        <ContributionActivity
+          key={String(period)}
+          months={activityState.status === 'loading' ? undefined : (activity?.months ?? null)}
+          period={period}
+          login={login}
+        />
       </div>
       <YearList years={years} period={period} className={styles.years} />
     </section>

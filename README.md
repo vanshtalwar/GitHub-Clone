@@ -15,7 +15,7 @@ A responsive recreation of the GitHub profile page for [`shreeramk`](https://git
 | 3a. Contribution heatmap via GitHub's contribution API, drawn with a charting library | GitHub GraphQL `contributionsCollection.contributionCalendar`, called by a Netlify Function (`netlify/functions/contributions.mts` → `server/githubContributions.ts`) that keeps the token server-side. Drawn by `src/components/overview/ContributionGraph.tsx` as an **ECharts calendar heatmap** (`heatmap` series + green `visualMap`) |
 | 3b. Left panel from `GET /users/{username}` | `src/api/github.ts` → `src/components/sidebar/ProfileSidebar.tsx` |
 | Working Repositories / Projects / Packages tabs | One route per tab (`src/routes.tsx`); deep links, reloads and back/forward work |
-| Extra: APIs instead of mock data elsewhere | Repos (+ "Forked from" + language), social links, organizations, stars count and starred list are all live |
+| Extra: APIs instead of mock data elsewhere | Repos (+ "Forked from" + language), social links, organizations, stars count and starred list (REST); status, Projects, the activity overview and the contribution timeline (GraphQL) are all live |
 
 Extras:
 - The year list (2026 … 2013) loads that year's calendar and keeps it in the URL (`?year=2019`).
@@ -31,7 +31,7 @@ Extras:
 | UI | React 19, TypeScript 6, Vite 8 |
 | Routing | React Router 7 (data router) |
 | Charts | ECharts 6: calendar heatmap (tree-shaken, lazy-loaded chunk) |
-| Serverless | Two Netlify Functions (Node) that call GitHub with a server token: the GraphQL contributions call, and a read-only gateway for the REST calls |
+| Serverless | Four Netlify Functions (Node) that call GitHub with a server token: GraphQL contributions, activity and profile details, and a read-only gateway for the REST calls |
 | Icons | `@primer/octicons-react` (GitHub's icon set) |
 | Styling | Plain CSS: CSS Modules + CSS custom properties (no UI kit) |
 | Tests | Vitest 5, Testing Library, jsdom |
@@ -59,11 +59,13 @@ Any user works: `http://localhost:5173/torvalds`. The default user is set in `sr
 URL /:username ─▶ ProfileLayout ─▶ <ProfileProvider username>
                                      ├─ loadProfile(): user, repos, social accounts, orgs, starred count,
                                      │  in parallel ──▶ /.netlify/functions/github ──▶ api.github.com
+                                     │  + status and projects ──▶ /.netlify/functions/profile ──▶ GraphQL
                                      │  (+ extras: the parts with no API)
                                      └─ then loadForkParents(): "Forked from …" for popular forks
 components ─▶ useProfile()                      (loading | notFound | error | ready)
 heatmap    ─▶ useContributions(user, period) ─▶ loadContributions() ─▶ /.netlify/functions/contributions
                                                    └─▶ api.github.com/graphql  (contributionsCollection.contributionCalendar)
+activity   ─▶ useActivity(user, period)      ─▶ loadActivity()      ─▶ /.netlify/functions/activity ──▶ GraphQL
 ```
 
 - **`shared/github.ts`** holds GitHub facts used by both the app and the server: the login rule, the first year (2008), URLs, the function paths and the contribution types. It imports nothing, so neither side depends on the other.
@@ -71,9 +73,9 @@ heatmap    ─▶ useContributions(user, period) ─▶ loadContributions() ─�
   - `http.ts`: `fetch` with a 10 s timeout + typed errors (`NotFoundError`, `RateLimitError` with reset time and limit, `NetworkError`)
   - `cache.ts`: localStorage (1 h TTL), shared in-flight requests, pruning
   - `failure.ts`: one user-facing summary of failures
-  - `github.ts`, `contributions.ts`
+  - `github.ts` (REST), `contributions.ts`, `activity.ts`, `profileDetails.ts` (GraphQL, through the functions)
 - **`src/context/`** is the only place that chooses between live and sample data:
-  - `loadProfile.ts`, `loadContributions.ts`. Neither ever rejects; failures become states.
+  - `loadProfile.ts`, `loadContributions.ts`, `loadActivity.ts`. None ever rejects; failures become states.
   - `ProfileContext.tsx`: the provider.
 - **`src/hooks/`**: `useLoader` (one "load per key, ignore stale results" hook used by the profile, the heatmap and the Stars tab), `useProfile`, `useContributions`, `useStarred`, `useUsername`, and small UI hooks.
 - **`src/components/`** only render what they're given. Nothing in `components/` imports sample data.
@@ -87,10 +89,13 @@ heatmap    ─▶ useContributions(user, period) ─▶ loadContributions() ─�
 - **`src/mocks/`** holds sample data copied from the assignment screenshot.
 - **`src/config.ts`** holds the app's settings: page sizes, cache TTL, timeout, storage prefix, docs links.
 - **`server/`** runs only on the server, where the token lives. Nothing in it ever throws: every outcome is a status + JSON.
-  - `githubContributions.ts`: the GraphQL call and mapping, exposed as `netlify/functions/contributions.mts`
-  - `githubRest.ts`: the REST gateway, exposed as `netlify/functions/github.mts`
-  - `githubFetch.ts`: what both share (token, timeout, rate-limit detection, caching headers)
-  - `vite.config.ts` serves both functions locally.
+  - `githubContributions.ts`: the contribution calendar, exposed as `netlify/functions/contributions.mts`
+  - `githubActivity.ts`: the activity overview + monthly timeline (`netlify/functions/activity.mts`)
+  - `githubProfile.ts`: the status and Projects (`netlify/functions/profile.mts`)
+  - `githubRest.ts`: the REST gateway (`netlify/functions/github.mts`)
+  - `githubGraphql.ts`: what the GraphQL functions share (input checks, allow-list, the query call, GraphQL errors)
+  - `githubFetch.ts`: what all of them share (token, timeout, rate-limit detection, caching headers)
+  - `vite.config.ts` serves all four functions locally.
 
 ### Data sources
 
@@ -102,9 +107,11 @@ heatmap    ─▶ useContributions(user, period) ─▶ loadContributions() ─�
 | Organizations | **Live**: `GET /users/{u}/orgs` | The API lists only public memberships. shreeramk's UptimeAI membership is private, and the design is the owner's view, so for shreeramk an empty list shows the design's org (sample data). For other users the section is hidden when empty. |
 | Stars count / Stars tab | **Live**: `GET /users/{u}/starred` (count from the `Link` header) | |
 | Contribution heatmap, year list | **Live**: GitHub GraphQL `contributionsCollection` (via the Netlify Function) | Requirement 3a; see below |
-| Achievements, status (🎯 Focusing), packages count | Mock | No public API |
-| Activity overview, contribution activity timeline | Mock | The Events API no longer includes commit counts or PR merge state, and private contributions aren't public |
-| Projects / Packages tabs | Empty state | Projects are GraphQL-only; Packages need a token |
+| Status on the avatar (🎯 Focusing) | **Live**: GraphQL `user.status` (via the profile function) | The design's status if it can't be loaded (shreeramk) |
+| Activity overview, contribution activity timeline | **Live**: GraphQL `contributionsCollection` per period and per month (via the activity function) | For shreeramk, GitHub only reveals a count: every contribution is in a private repository, which GitHub itemises only for the owner, and the design is the owner's view. So shreeramk shows the design's activity whenever the live data has nothing public |
+| Projects tab + counter | **Live**: GraphQL `user.projectsV2` | shreeramk has none, so it shows GitHub's empty state |
+| Achievements | Mock | No API at all (REST or GraphQL) |
+| Packages count / tab | Mock count; empty state | GitHub only lists packages to classic tokens with package permissions (fine-grained tokens get 0), so a "live" count would always be wrong |
 
 **Fallback rules:**
 - A 404 shows "User not found".
@@ -139,6 +146,10 @@ heatmap    ─▶ useContributions(user, period) ─▶ loadContributions() ─�
 
   "Last year" omits `from`/`to` (GitHub's default window, the same as the profile page). A year passes Jan 1 – Dec 31. `contributionLevel` (`NONE` … `FOURTH_QUARTILE`) becomes 0–4, which the ECharts `visualMap` colours green.
 
+- **Activity and profile details (GitHub GraphQL).** Two more functions use the same token and checks:
+  - `/.netlify/functions/activity?user=&y=` returns the activity overview (shares of commits, pull requests, issues and reviews; the busiest repositories and their organizations) and a 12-month timeline (commits per repository, pull requests by merged/open/closed, the count of private contributions). It runs four queries in parallel (the overview, and three batches of four months): one big query took over 8 s for very active users.
+  - `/.netlify/functions/profile?user=` returns the status (the emoji character comes from `emojiHTML`) and the 20 most recently updated Projects.
+
   Responses are cached for 1 hour on Netlify's CDN and in the browser, which protects the token's 5,000/hour quota. The function answers 404 for unknown users, 429 when GitHub rate-limits, and 500 if `GITHUB_TOKEN` isn't set. In those cases the page falls back as described above. Verified against github.com: 2,186 contributions in the last year and 1,185 in 2019 for shreeramk, with matching per-day counts.
 
 ## Responsive behaviour
@@ -160,11 +171,11 @@ heatmap    ─▶ useContributions(user, period) ─▶ loadContributions() ─�
 
 ## Tests
 
-173 tests in 30 files. Tests never touch the network: `fetch` is stubbed in `src/test/setup.ts`. They cover:
+205 tests in 34 files. Tests never touch the network: `fetch` is stubbed in `src/test/setup.ts`. They cover:
 - the API clients (errors, timeouts, Link-header parsing) and the cache (TTL, unavailable storage, shared requests, pruning, clearing)
-- the GitHub GraphQL contributions function: query, level mapping, 400/403/404/429/500/502/504, and that it never throws
+- the GitHub GraphQL functions: query, level mapping, 400/403/404/429/500/502/504, and that they never throw; the activity function's month ranges, ranking and parallel queries; status parsing
 - the GitHub REST function: allowed and refused paths, pass-through of answers and the Link header, error statuses; and the browser's fallback to GitHub directly
-- `loadProfile` fallback rules
+- `loadProfile` and `loadActivity` fallback rules (including the owner-view rule for shreeramk)
 - routing (every tab, deep links, back/forward, redirects)
 - the header search, tab counters, sidebar, repos, heatmap option builder
 - year switching via the URL, the settings dropdown, and the activity timeline
@@ -178,7 +189,7 @@ The repo is ready for Netlify:
 The heatmap and the REST calls need the Netlify Functions, so deploy **from Git or with the CLI**. Netlify's drag-and-drop upload doesn't include functions.
 
 1. **Set the token.** In Netlify, go to *Site configuration → Environment variables* and add `GITHUB_TOKEN` (any GitHub personal access token; a fine-grained one with no extra permissions works).
-   - Optional: `CONTRIBUTIONS_ALLOWED_USERS=shreeramk` limits which logins the contributions function serves. By default it serves anyone, so anyone can spend the token's quota.
+   - Optional: `CONTRIBUTIONS_ALLOWED_USERS=shreeramk` limits which logins the GraphQL functions (contributions, activity, profile) serve. By default it serves anyone, so anyone can spend the token's quota.
 2. **Deploy from Git:**
    - Push this folder to a GitHub repo.
    - In Netlify, choose *Add new site → Import an existing project*, pick the repo, then *Deploy*. The build and function settings come from `netlify.toml`.
@@ -191,6 +202,7 @@ The heatmap and the REST calls need the Netlify Functions, so deploy **from Git 
 - **Header controls.** Menu, Copilot, +, issues, pull requests, inbox and avatar link to the matching github.com pages, which ask the visitor to sign in. The search box works in the app.
 - **Owner-view elements.** "Edit profile" and "Customize your pins" follow the design's logged-in view and link to GitHub's profile settings and pinning docs.
 - **Partial lists.** The Repositories tab loads the 100 most recently updated repos, and Stars the 30 most recent, with a "View all on GitHub" note when there are more. For accounts with more than 100 repos, Popular repositories is chosen from those 100. Loading every page would spend the visitor's 60 calls per hour.
-- **Sample data.** The activity overview, timeline, achievements, status and packages count have no public API. They exist for shreeramk only (`profile.extras`) and are hidden for other users. The organization chips link to the orgs; GitHub's per-org filtering needs data we don't have.
+- **Sample data.** Achievements have no API, and packages can't be read with a fine-grained token. They exist for shreeramk only (`profile.extras`) and are hidden for other users. shreeramk's activity is the design's, because GitHub only details it to the owner.
+- **Activity timeline.** It covers commits, pull requests and the private count, the parts GitHub's timeline shows most. Issues and reviews count towards the overview's shares, but aren't listed as timeline entries. The organization chips link to the orgs; GitHub's per-org filtering needs data we don't have.
 - **Rate limit.** Without `GITHUB_TOKEN`, or once its 5,000/hour are used up, the browser calls GitHub directly, where heavy use from one IP can exhaust the 60/hour limit. The page then shows sample data (shreeramk) or an explanation (other users) until it resets.
 - **The heatmap needs `GITHUB_TOKEN` on the server.** Without it the contributions function answers 500, and the heatmap shows sample data (shreeramk) or "couldn't be loaded" (other users).

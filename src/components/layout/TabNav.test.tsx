@@ -20,6 +20,12 @@ describe('TabNav', () => {
     expect(screen.getByRole('link', { name: 'Stars (3)' })).toBeInTheDocument();
   });
 
+  it('counts live projects', () => {
+    const projects = { totalCount: 2, items: [] };
+    renderInProfile(<TabNav />, { profile: readyProfile({ projects }) });
+    expect(screen.getByRole('link', { name: 'Projects (2)' })).toHaveAttribute('href', '/shreeramk/projects');
+  });
+
   it('shows no counts while the profile is loading', () => {
     renderInProfile(<TabNav />, { profile: { status: 'loading' } });
     expect(screen.getByRole('link', { name: 'Repositories' })).toBeInTheDocument();

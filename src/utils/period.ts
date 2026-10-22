@@ -32,6 +32,12 @@ export function activityMonth(period: ContributionPeriod, monthsAgo: number, now
   };
 }
 
+/** "2026-10" → { month: 'October', year: 2026 } (a live timeline month). */
+export function calendarMonth(yyyyMm: string): { month: string; year: number } {
+  const date = new Date(`${yyyyMm}-01T00:00:00Z`);
+  return { month: date.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' }), year: date.getUTCFullYear() };
+}
+
 /** Years for the year list: this year first, back to the year the account was created. */
 export function profileYears(createdAt: string, thisYear: number): number[] {
   const firstYear = Math.min(thisYear, Math.max(FIRST_GITHUB_YEAR, new Date(createdAt).getUTCFullYear()));

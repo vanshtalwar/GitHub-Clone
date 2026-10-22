@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { mockExtras, mockOrgs, mockRepos, mockUser } from '../mocks/profile';
+import { mockDetails, mockExtras, mockOrgs, mockRepos, mockUser } from '../mocks/profile';
 import { githubPath, jsonResponse, stubFetch } from '../test/http';
 import type { Repo } from '../types/github';
 import { forksNeedingParents, loadForkParents, loadProfile, withForkParents } from './loadProfile';
@@ -40,9 +40,18 @@ function apiFork(login: string) {
   };
 }
 
-/** A working GitHub API for one user. */
+const liveDetails = {
+  status: { emoji: '🚀', message: 'Shipping' },
+  projects: {
+    totalCount: 1,
+    items: [{ title: 'Roadmap', shortDescription: null, url: 'https://github.com/users/x/projects/1', closed: false, updatedAt: '2026-10-01T00:00:00Z' }],
+  },
+};
+
+/** A working GitHub API for one user (REST, plus the profile details function for the GraphQL parts). */
 function liveGithub(login: string) {
   return (url: string): Response | undefined => {
+    if (url.startsWith('/.netlify/functions/profile')) return jsonResponse(liveDetails);
     const path = githubPath(url).split('?')[0];
     if (path === `/users/${login}`) return jsonResponse(apiUser(login));
     if (path === `/users/${login}/repos`) return jsonResponse([apiFork(login)]);
@@ -75,7 +84,20 @@ describe('loadProfile', () => {
     expect(state.repos.map((repo) => repo.name)).toEqual(['tool']);
     expect(state.orgs).toEqual([]); // an empty live result is kept, not replaced with mock
     expect(state.starredCount).toBe(7);
+    expect(state.userStatus).toEqual({ emoji: '🚀', message: 'Shipping' });
+    expect(state.projects).toEqual(liveDetails.projects);
     expect(state.extras).toBeNull(); // no sample data for this user
+  });
+
+  it('still shows the profile if the status and projects can’t be loaded', async () => {
+    const live = liveGithub('octo');
+    stubFetch((url) => (url.startsWith('/.netlify/functions/profile') ? undefined : live(url)));
+    const state = await loadProfile('octo');
+
+    if (state.status !== 'ready') throw new Error(`unexpected status ${state.status}`);
+    expect(state.failure).toBeUndefined();
+    expect(state.userStatus).toBeNull();
+    expect(state.projects).toBeNull(); // the Projects tab says it couldn't load them
   });
 
   it('does not wait for fork parents (they are loaded separately)', async () => {
@@ -109,6 +131,16 @@ describe('loadProfile', () => {
       expect(state.user).toEqual(mockUser);
       expect(state.repos).toEqual(mockRepos);
       expect(state.extras).toEqual(mockExtras('shreeramk'));
+    });
+
+    it('uses the design’s status if the status can’t be loaded, and says so', async () => {
+      const live = liveGithub('shreeramk');
+      stubFetch((url) => (url.startsWith('/.netlify/functions/profile') ? undefined : live(url)));
+      const state = await loadProfile('shreeramk');
+
+      if (state.status !== 'ready') throw new Error(`unexpected status ${state.status}`);
+      expect(state.userStatus).toEqual(mockDetails.status);
+      expect(state.failure).toEqual({ rateLimited: false });
     });
 
     it('replaces only the failing section and reports the rate limit', async () => {

@@ -41,6 +41,7 @@
   --color-underline-active: #fd8c73; /* active tab */
   --color-success-emphasis: #1f883d; /* "open" PR badge */
   --color-done-emphasis: #8250df; /* "merged" PR badge */
+  --color-closed-emphasis: #cf222e; /* "closed" PR badge */
   --color-attention: #9a6700; /* warning icon */
   --color-attention-subtle: #fff8c5; /* warning banner background */
   --color-attention-border: #d4a72c66;
