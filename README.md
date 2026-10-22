@@ -31,7 +31,7 @@ Extras:
 | UI | React 19, TypeScript 6, Vite 8 |
 | Routing | React Router 7 (data router) |
 | Charts | ECharts 6: calendar heatmap (tree-shaken, lazy-loaded chunk) |
-| Serverless | One Netlify Function (Node) for the GitHub GraphQL call |
+| Serverless | Two Netlify Functions (Node) that call GitHub with a server token: the GraphQL contributions call, and a read-only gateway for the REST calls |
 | Icons | `@primer/octicons-react` (GitHub's icon set) |
 | Styling | Plain CSS: CSS Modules + CSS custom properties (no UI kit) |
 | Tests | Vitest 5, Testing Library, jsdom |
@@ -42,7 +42,7 @@ Extras:
 Requires Node `^20.19` or `>=22.12`, and a GitHub token for the heatmap. Any personal access token works; a fine-grained token with no extra permissions is enough to read public contribution data.
 
 ```bash
-cp .env.example .env.local   # then set GITHUB_TOKEN=... (git-ignored; used only by the local function)
+cp .env.example .env.local   # then set GITHUB_TOKEN=... (git-ignored; used only by the local functions)
 npm ci
 npm run dev          # http://localhost:5173 (redirects to /shreeramk)
 npm test             # unit + component tests
@@ -51,21 +51,22 @@ npm run preview      # serve dist/ at http://localhost:4173
 npm run lint
 ```
 
-Any user works: `http://localhost:5173/torvalds`. The default user is set in `src/config.ts`. `npm run dev` and `npm run preview` serve the contributions function locally (a small Vite middleware in `vite.config.ts` runs the same code as the Netlify Function).
+Any user works: `http://localhost:5173/torvalds`. The default user is set in `src/config.ts`. `npm run dev` and `npm run preview` serve both functions locally (a small Vite middleware in `vite.config.ts` runs the same code as the Netlify Functions).
 
 ## How it works
 
 ```
 URL /:username ─▶ ProfileLayout ─▶ <ProfileProvider username>
                                      ├─ loadProfile(): user, repos, social accounts, orgs, starred count,
-                                     │  in parallel ──▶ api.github.com       (+ extras: the parts with no API)
+                                     │  in parallel ──▶ /.netlify/functions/github ──▶ api.github.com
+                                     │  (+ extras: the parts with no API)
                                      └─ then loadForkParents(): "Forked from …" for popular forks
 components ─▶ useProfile()                      (loading | notFound | error | ready)
 heatmap    ─▶ useContributions(user, period) ─▶ loadContributions() ─▶ /.netlify/functions/contributions
                                                    └─▶ api.github.com/graphql  (contributionsCollection.contributionCalendar)
 ```
 
-- **`shared/github.ts`** holds GitHub facts used by both the app and the server: the login rule, the first year (2008), URLs, the function path and the contribution types. It imports nothing, so neither side depends on the other.
+- **`shared/github.ts`** holds GitHub facts used by both the app and the server: the login rule, the first year (2008), URLs, the function paths and the contribution types. It imports nothing, so neither side depends on the other.
 - **`src/api/`** fetches, caches and maps responses to typed domain objects. It knows nothing about sample data.
   - `http.ts`: `fetch` with a 10 s timeout + typed errors (`NotFoundError`, `RateLimitError` with reset time and limit, `NetworkError`)
   - `cache.ts`: localStorage (1 h TTL), shared in-flight requests, pruning
@@ -85,7 +86,11 @@ heatmap    ─▶ useContributions(user, period) ─▶ loadContributions() ─�
 - **Unexpected errors:** the chart has its own error boundary, and the root route has a friendly error page (`pages/RouteErrorPage.tsx`).
 - **`src/mocks/`** holds sample data copied from the assignment screenshot.
 - **`src/config.ts`** holds the app's settings: page sizes, cache TTL, timeout, storage prefix, docs links.
-- **`server/githubContributions.ts`** is the server-only GraphQL call and mapping. It never throws: every outcome is a status + JSON. `netlify/functions/contributions.mts` exposes it on Netlify, and `vite.config.ts` exposes it locally.
+- **`server/`** runs only on the server, where the token lives. Nothing in it ever throws: every outcome is a status + JSON.
+  - `githubContributions.ts`: the GraphQL call and mapping, exposed as `netlify/functions/contributions.mts`
+  - `githubRest.ts`: the REST gateway, exposed as `netlify/functions/github.mts`
+  - `githubFetch.ts`: what both share (token, timeout, rate-limit detection, caching headers)
+  - `vite.config.ts` serves both functions locally.
 
 ### Data sources
 
@@ -109,7 +114,11 @@ heatmap    ─▶ useContributions(user, period) ─▶ loadContributions() ─�
 
 ### API notes
 
-- **Rate limit.** Unauthenticated GitHub requests are limited to 60 per hour per IP. An uncached profile load costs 5 calls, plus 1 per fork shown (11 for shreeramk). The fork lookups run after the page has rendered.
+- **Rate limit.** Called from the browser, GitHub allows 60 requests per hour per IP, which one busy visitor or office network can use up. So the REST calls go through a second Netlify Function (`/.netlify/functions/github?path=/users/shreeramk`) that adds `GITHUB_TOKEN`.
+  - Visitors share the token's 5,000 requests per hour, and Netlify's CDN answers repeat requests for an hour.
+  - The function serves only the read-only endpoints the page uses (`/users/{login}` and its `repos`, `social_accounts`, `orgs`, `starred`, plus `/repos/{owner}/{repo}`) and refuses anything else.
+  - If it can't answer (no token, GitHub unreachable, quota used up), the browser asks GitHub directly. A 404 isn't retried.
+  - An uncached profile load costs 5 calls, plus 1 per fork shown (11 for shreeramk). The fork lookups run after the page has rendered.
   - Responses are cached in localStorage for an hour, so reloads cost nothing. Expired and old-version entries are pruned at startup.
   - Every request times out after 10 s, so no section can stay loading forever.
   - Failures fall back as described above. Messages name the real limit (60/h for visitors, 5,000/h for the server token) and when it resets.
@@ -151,9 +160,10 @@ heatmap    ─▶ useContributions(user, period) ─▶ loadContributions() ─�
 
 ## Tests
 
-150 tests in 29 files. Tests never touch the network: `fetch` is stubbed in `src/test/setup.ts`. They cover:
+173 tests in 30 files. Tests never touch the network: `fetch` is stubbed in `src/test/setup.ts`. They cover:
 - the API clients (errors, timeouts, Link-header parsing) and the cache (TTL, unavailable storage, shared requests, pruning, clearing)
 - the GitHub GraphQL contributions function: query, level mapping, 400/403/404/429/500/502/504, and that it never throws
+- the GitHub REST function: allowed and refused paths, pass-through of answers and the Link header, error statuses; and the browser's fallback to GitHub directly
 - `loadProfile` fallback rules
 - routing (every tab, deep links, back/forward, redirects)
 - the header search, tab counters, sidebar, repos, heatmap option builder
@@ -165,16 +175,16 @@ The repo is ready for Netlify:
 - `netlify.toml` sets the build and the functions folder.
 - `public/_redirects` gives the single-page fallback, so deep links like `/shreeramk/projects` work.
 
-The heatmap needs the Netlify Function, so deploy **from Git or with the CLI**. Netlify's drag-and-drop upload doesn't include functions.
+The heatmap and the REST calls need the Netlify Functions, so deploy **from Git or with the CLI**. Netlify's drag-and-drop upload doesn't include functions.
 
 1. **Set the token.** In Netlify, go to *Site configuration → Environment variables* and add `GITHUB_TOKEN` (any GitHub personal access token; a fine-grained one with no extra permissions works).
-   - Optional: `CONTRIBUTIONS_ALLOWED_USERS=shreeramk` limits which logins the function serves. By default it serves anyone, so anyone can spend the token's quota.
+   - Optional: `CONTRIBUTIONS_ALLOWED_USERS=shreeramk` limits which logins the contributions function serves. By default it serves anyone, so anyone can spend the token's quota.
 2. **Deploy from Git:**
    - Push this folder to a GitHub repo.
    - In Netlify, choose *Add new site → Import an existing project*, pick the repo, then *Deploy*. The build and function settings come from `netlify.toml`.
    - If this folder isn't the repository root, set *Base directory* to it.
 3. **Or deploy with the CLI:** `npx netlify-cli login`, then `npx netlify-cli deploy --build --prod` from this folder. Link or create the site when asked.
-4. **Check:** `https://<site>/.netlify/functions/contributions?user=shreeramk` should return JSON with `total`. Then open `/shreeramk`.
+4. **Check:** `https://<site>/.netlify/functions/contributions?user=shreeramk` should return JSON with `total`, and `https://<site>/.netlify/functions/github?path=/users/shreeramk` the user. Then open `/shreeramk`.
 
 ## Known limitations
 
@@ -182,5 +192,5 @@ The heatmap needs the Netlify Function, so deploy **from Git or with the CLI**. 
 - **Owner-view elements.** "Edit profile" and "Customize your pins" follow the design's logged-in view and link to GitHub's profile settings and pinning docs.
 - **Partial lists.** The Repositories tab loads the 100 most recently updated repos, and Stars the 30 most recent, with a "View all on GitHub" note when there are more. For accounts with more than 100 repos, Popular repositories is chosen from those 100. Loading every page would spend the visitor's 60 calls per hour.
 - **Sample data.** The activity overview, timeline, achievements, status and packages count have no public API. They exist for shreeramk only (`profile.extras`) and are hidden for other users. The organization chips link to the orgs; GitHub's per-org filtering needs data we don't have.
-- **Rate limit.** Heavy use from one IP can exhaust the limit. The page then shows sample data (shreeramk) or an explanation (other users) until it resets.
-- **The heatmap needs `GITHUB_TOKEN` on the server.** Without it the function answers 500, and the heatmap shows sample data (shreeramk) or "couldn't be loaded" (other users).
+- **Rate limit.** Without `GITHUB_TOKEN`, or once its 5,000/hour are used up, the browser calls GitHub directly, where heavy use from one IP can exhaust the 60/hour limit. The page then shows sample data (shreeramk) or an explanation (other users) until it resets.
+- **The heatmap needs `GITHUB_TOKEN` on the server.** Without it the contributions function answers 500, and the heatmap shows sample data (shreeramk) or "couldn't be loaded" (other users).

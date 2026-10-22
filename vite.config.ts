@@ -3,32 +3,48 @@ import type { Connect, Plugin } from 'vite';
 import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { contributionsHeaders, getContributionCalendar, parseAllowedUsers } from './server/githubContributions.ts';
-import { CONTRIBUTIONS_PATH } from './shared/github.ts';
+import { getGithubRest } from './server/githubRest.ts';
+import { CONTRIBUTIONS_PATH, GITHUB_REST_PATH } from './shared/github.ts';
+
+interface FunctionResponse {
+  status: number;
+  body: string;
+  headers: Record<string, string>;
+}
 
 /**
- * Serves the contributions function locally (npm run dev / npm run preview), so the app behaves as on Netlify.
- * The token comes from GITHUB_TOKEN in the environment or .env.local and stays in this Node process.
+ * Serves the Netlify Functions locally (npm run dev / npm run preview), so the app behaves as on Netlify.
+ * The token comes from GITHUB_TOKEN in the environment or .env / .env.local and stays in this Node process.
  */
-function contributionsFunction(env: Record<string, string>): Plugin {
-  const handle: Connect.NextHandleFunction = (req, res) => {
-    const params = new URL(req.url ?? '/', 'http://localhost').searchParams;
-    // getContributionCalendar never rejects; the catch is a last line of defence, because an unhandled
-    // rejection here would terminate the dev server.
-    void getContributionCalendar(params, {
-      token: env.GITHUB_TOKEN,
-      allowedUsers: parseAllowedUsers(env.CONTRIBUTIONS_ALLOWED_USERS),
-    })
-      .catch(() => ({ status: 500, body: { error: 'Unexpected error' } }))
-      .then((result) => {
-        res.writeHead(result.status, contributionsHeaders(result));
-        res.end(JSON.stringify(result.body));
+function netlifyFunctions(env: Record<string, string>): Plugin {
+  const token = env.GITHUB_TOKEN;
+  const functions: Record<string, (params: URLSearchParams) => Promise<FunctionResponse>> = {
+    [CONTRIBUTIONS_PATH]: async (params) => {
+      const result = await getContributionCalendar(params, {
+        token,
+        allowedUsers: parseAllowedUsers(env.CONTRIBUTIONS_ALLOWED_USERS),
       });
+      return { status: result.status, body: JSON.stringify(result.body), headers: contributionsHeaders(result) };
+    },
+    [GITHUB_REST_PATH]: (params) => getGithubRest(params.get('path') ?? '', { token }),
   };
-  return {
-    name: 'contributions-function',
-    configureServer: (server) => void server.middlewares.use(CONTRIBUTIONS_PATH, handle),
-    configurePreviewServer: (server) => void server.middlewares.use(CONTRIBUTIONS_PATH, handle),
+
+  const register = ({ middlewares }: { middlewares: Connect.Server }) => {
+    for (const [path, run] of Object.entries(functions)) {
+      middlewares.use(path, (req, res) => {
+        const params = new URL(req.url ?? '/', 'http://localhost').searchParams;
+        // The functions never reject; the catch is a last line of defence, because an unhandled rejection here
+        // would terminate the dev server.
+        void run(params)
+          .catch(() => ({ status: 500, body: '{"error":"Unexpected error"}', headers: { 'Content-Type': 'application/json' } }))
+          .then(({ status, body, headers }) => {
+            res.writeHead(status, headers);
+            res.end(body);
+          });
+      });
+    }
   };
+  return { name: 'netlify-functions', configureServer: register, configurePreviewServer: register };
 }
 
 // https://vite.dev/config/ and https://vitest.dev/config/
@@ -36,7 +52,7 @@ export default defineConfig(({ mode }) => {
   // '' prefix: read GITHUB_TOKEN too. Only used here on the server; Vite exposes just VITE_* variables to the client.
   const env = loadEnv(mode, process.cwd(), '');
   return {
-    plugins: [react(), contributionsFunction(env)],
+    plugins: [react(), netlifyFunctions(env)],
     test: {
       environment: 'jsdom',
       setupFiles: ['./src/test/setup.ts'],

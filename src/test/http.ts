@@ -1,4 +1,16 @@
 import { vi } from 'vitest';
+import { GITHUB_API_URL, GITHUB_REST_PATH } from '../../shared/github';
+
+/**
+ * The GitHub REST path a request asks for, e.g. "/users/octo/repos?per_page=100", whether it went through the site's
+ * GitHub function or straight to api.github.com. Other requests give "".
+ */
+export function githubPath(url: string): string {
+  const parsed = new URL(url, 'http://site.test');
+  if (parsed.origin === GITHUB_API_URL) return parsed.pathname + parsed.search;
+  if (parsed.pathname === GITHUB_REST_PATH) return parsed.searchParams.get('path') ?? '';
+  return '';
+}
 
 export function jsonResponse(
   body: unknown,

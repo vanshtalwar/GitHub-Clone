@@ -8,11 +8,9 @@ import {
   type ContributionCalendar,
   type ContributionLevel,
 } from '../shared/github.ts';
+import { cachingHeaders, fetchGithub, GithubFailure, rateLimited } from './githubFetch.ts';
 
 const GRAPHQL_URL = `${GITHUB_API_URL}/graphql`;
-const USER_AGENT = 'github-profile-assignment';
-/** Fail before Netlify's own function timeout (10 s) so the client gets a proper answer. */
-const GITHUB_TIMEOUT_MS = 8_000;
 
 export const CONTRIBUTIONS_QUERY = `query ($login: String!, $from: DateTime, $to: DateTime) {
   user(login: $login) {
@@ -69,7 +67,10 @@ export interface ContributionsOptions {
 export async function getContributionCalendar(params: URLSearchParams, options: ContributionsOptions): Promise<ContributionsResult> {
   try {
     return await fetchCalendar(params, options);
-  } catch {
+  } catch (error) {
+    if (error instanceof GithubFailure) {
+      return { status: error.status, body: { error: error.message }, rateLimitHeaders: error.rateLimitHeaders };
+    }
     return { status: 500, body: { error: 'Unexpected error while loading contributions' } };
   }
 }
@@ -93,25 +94,13 @@ async function fetchCalendar(
 
   const variables = year === null ? { login } : { login, from: `${year}-01-01T00:00:00Z`, to: `${year}-12-31T23:59:59Z` };
 
-  let response: Response;
-  try {
-    response = await fetchImpl(GRAPHQL_URL, {
-      method: 'POST',
-      headers: { Authorization: `bearer ${token}`, 'Content-Type': 'application/json', 'User-Agent': USER_AGENT },
-      body: JSON.stringify({ query: CONTRIBUTIONS_QUERY, variables }),
-      signal: AbortSignal.timeout(GITHUB_TIMEOUT_MS),
-    });
-  } catch (error) {
-    const timedOut = error instanceof DOMException && error.name === 'TimeoutError';
-    return timedOut
-      ? { status: 504, body: { error: 'GitHub did not answer in time' } }
-      : { status: 502, body: { error: 'GitHub could not be reached' } };
-  }
-
-  if (response.status === 401) return { status: 500, body: { error: 'GitHub rejected the server token' } };
-  if (isRateLimited(response)) {
-    return { status: 429, body: { error: 'GitHub rate limit reached' }, rateLimitHeaders: rateLimitHeaders(response.headers) };
-  }
+  const response = await fetchGithub(GRAPHQL_URL, {
+    token,
+    fetchImpl,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: CONTRIBUTIONS_QUERY, variables }),
+  });
   if (!response.ok) return { status: 502, body: { error: `GitHub answered ${response.status}` } };
 
   let json: GraphQLResponse;
@@ -124,9 +113,7 @@ async function fetchCalendar(
   if (json.errors?.some((error) => error.type === 'NOT_FOUND') || json.data?.user === null) {
     return { status: 404, body: { error: `GitHub user "${login}" not found` } };
   }
-  if (json.errors?.some((error) => error.type === 'RATE_LIMITED')) {
-    return { status: 429, body: { error: 'GitHub rate limit reached' }, rateLimitHeaders: rateLimitHeaders(response.headers) };
-  }
+  if (json.errors?.some((error) => error.type === 'RATE_LIMITED')) throw rateLimited(response.headers);
   const calendar = json.data?.user?.contributionsCollection?.contributionCalendar;
   if (!calendar) return { status: 502, body: { error: json.errors?.[0]?.message ?? 'Unexpected response from GitHub' } };
 
@@ -141,32 +128,9 @@ async function fetchCalendar(
   };
 }
 
-/** Only real rate limits: GitHub also answers 403 for other refusals (e.g. a token without access). */
-function isRateLimited({ status, headers }: Response): boolean {
-  if (status === 429) return true;
-  return status === 403 && (headers.get('x-ratelimit-remaining') === '0' || headers.has('retry-after'));
-}
-
-function rateLimitHeaders(headers: Headers): Record<string, string> {
-  const forwarded: Record<string, string> = {};
-  for (const name of ['x-ratelimit-limit', 'x-ratelimit-reset', 'retry-after']) {
-    const value = headers.get(name);
-    if (value) forwarded[name] = value;
-  }
-  return forwarded;
-}
-
-/** Response headers: successful calendars are cached 5 min in the browser and 1 h on Netlify's CDN. */
+/** Response headers: successful calendars are cached (see cachingHeaders), failures forward rate-limit details. */
 export function contributionsHeaders({ status, rateLimitHeaders: forwarded }: ContributionsResult): Record<string, string> {
-  const caching: Record<string, string> =
-    status === 200
-      ? {
-          'Cache-Control': 'public, max-age=300',
-          'Netlify-CDN-Cache-Control': 'public, durable, s-maxage=3600, stale-while-revalidate=86400',
-          'Netlify-Vary': 'query=user|y',
-        }
-      : { 'Cache-Control': 'no-store' };
-  return { 'Content-Type': 'application/json', ...caching, ...forwarded };
+  return { 'Content-Type': 'application/json', ...cachingHeaders(status, ['user', 'y']), ...forwarded };
 }
 
 /** CONTRIBUTIONS_ALLOWED_USERS="shreeramk,octocat" → ["shreeramk", "octocat"]; unset → [] (anyone). */

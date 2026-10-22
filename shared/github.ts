@@ -19,6 +19,9 @@ export function githubUrl(path: string): string {
 /** Where the browser calls the contributions function (Netlify serves functions at /.netlify/functions/<name>). */
 export const CONTRIBUTIONS_PATH = '/.netlify/functions/contributions';
 
+/** Where the browser calls the GitHub REST function, with ?path=<REST path>. */
+export const GITHUB_REST_PATH = '/.netlify/functions/github';
+
 export type ContributionLevel = 0 | 1 | 2 | 3 | 4;
 
 export interface ContributionDay {

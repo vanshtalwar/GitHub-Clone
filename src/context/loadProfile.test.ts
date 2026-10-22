@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { mockExtras, mockOrgs, mockRepos, mockUser } from '../mocks/profile';
-import { jsonResponse, stubFetch } from '../test/http';
+import { githubPath, jsonResponse, stubFetch } from '../test/http';
 import type { Repo } from '../types/github';
 import { forksNeedingParents, loadForkParents, loadProfile, withForkParents } from './loadProfile';
 
@@ -43,7 +43,7 @@ function apiFork(login: string) {
 /** A working GitHub API for one user. */
 function liveGithub(login: string) {
   return (url: string): Response | undefined => {
-    const path = new URL(url).pathname;
+    const path = githubPath(url).split('?')[0];
     if (path === `/users/${login}`) return jsonResponse(apiUser(login));
     if (path === `/users/${login}/repos`) return jsonResponse([apiFork(login)]);
     if (path === `/repos/${login}/tool`) {
@@ -104,7 +104,7 @@ describe('loadProfile', () => {
 
     it('replaces only the failing section and reports the rate limit', async () => {
       const live = liveGithub('shreeramk');
-      stubFetch((url) => (url.includes('/orgs') ? rateLimited() : live(url)));
+      stubFetch((url) => (githubPath(url).endsWith('/orgs') ? rateLimited() : live(url)));
       const state = await loadProfile('shreeramk');
 
       if (state.status !== 'ready') throw new Error(`unexpected status ${state.status}`);
@@ -125,7 +125,7 @@ describe('loadProfile', () => {
 
     it('returns an error even if only one section fails', async () => {
       const live = liveGithub('octo');
-      stubFetch((url) => (url.includes('/orgs') ? undefined : live(url)));
+      stubFetch((url) => (githubPath(url).endsWith('/orgs') ? undefined : live(url)));
       await expect(loadProfile('octo')).resolves.toEqual({ status: 'error', failure: { rateLimited: false } });
     });
   });
@@ -148,7 +148,7 @@ describe('fork parents', () => {
 
   it('loads parents and skips failed lookups', async () => {
     const live = liveGithub('octo');
-    stubFetch((url) => (url.includes('/repos/octo/broken') ? undefined : live(url)));
+    stubFetch((url) => (githubPath(url) === '/repos/octo/broken' ? undefined : live(url)));
     const parents = await loadForkParents([fork('tool'), fork('broken')]);
     expect([...parents.keys()]).toEqual(['octo/tool']);
   });

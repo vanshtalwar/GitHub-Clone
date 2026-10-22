@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { jsonResponse, stubFetch } from '../test/http';
+import { githubPath, jsonResponse, stubFetch } from '../test/http';
 import { getStarredCount, getUser, parseLastPage } from './github';
 import { NetworkError, NotFoundError, RateLimitError } from './http';
 
@@ -50,7 +50,7 @@ describe('getUser', () => {
   };
 
   it('maps the API response and caches it', async () => {
-    const fetchMock = stubFetch((url) => (url.endsWith('/users/octo') ? jsonResponse(apiUser) : undefined));
+    const fetchMock = stubFetch((url) => (githubPath(url) === '/users/octo' ? jsonResponse(apiUser) : undefined));
 
     const user = await getUser('octo');
     expect(user).toMatchObject({ login: 'octo', avatarUrl: 'https://avatars.example/octo', publicRepos: 8 });
@@ -59,9 +59,30 @@ describe('getUser', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('throws NotFoundError for a 404', async () => {
-    stubFetch(() => jsonResponse({ message: 'Not Found' }, { status: 404 }));
+  it('asks the site’s GitHub function, which adds the server token', async () => {
+    const fetchMock = stubFetch(() => jsonResponse(apiUser));
+    await getUser('octo');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith('/.netlify/functions/github?path=%2Fusers%2Focto', expect.anything());
+  });
+
+  it('asks GitHub directly when the function can’t answer', async () => {
+    const fetchMock = stubFetch((url) =>
+      url.startsWith('https://api.github.com/')
+        ? jsonResponse(apiUser)
+        : jsonResponse({ error: 'GITHUB_TOKEN is not configured on the server' }, { status: 500 }),
+    );
+    await expect(getUser('octo')).resolves.toMatchObject({ login: 'octo' });
+    expect(fetchMock.mock.calls.map(([url]) => String(url))).toEqual([
+      '/.netlify/functions/github?path=%2Fusers%2Focto',
+      'https://api.github.com/users/octo',
+    ]);
+  });
+
+  it('throws NotFoundError for a 404 without asking again: the user doesn’t exist', async () => {
+    const fetchMock = stubFetch(() => jsonResponse({ message: 'Not Found' }, { status: 404 }));
     await expect(getUser('nobody')).rejects.toBeInstanceOf(NotFoundError);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('throws RateLimitError when the limit is used up', async () => {

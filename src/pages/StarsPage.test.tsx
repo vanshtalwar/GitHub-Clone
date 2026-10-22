@@ -22,7 +22,7 @@ const starredRepo = {
 describe('StarsPage', () => {
   it('loads the starred repos when the tab opens and shows the owner', async () => {
     const fetchMock = stubFetch((url) =>
-      url === 'https://api.github.com/users/shreeramk/starred?per_page=30' ? jsonResponse([starredRepo]) : undefined,
+      url === '/.netlify/functions/github?path=%2Fusers%2Fshreeramk%2Fstarred%3Fper_page%3D30' ? jsonResponse([starredRepo]) : undefined,
     );
     renderInProfile(<StarsPage />, { url: '/shreeramk/stars' });
 

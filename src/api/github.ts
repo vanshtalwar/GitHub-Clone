@@ -1,9 +1,10 @@
-// GitHub REST API client (unauthenticated). Every call is cached; see cache.ts.
-import { GITHUB_API_URL } from '../../shared/github';
+// GitHub REST API client. Requests go through the site's GitHub function (server/githubRest.ts), which adds the
+// server token; see get(). Every call is cached; see cache.ts.
+import { GITHUB_API_URL, GITHUB_REST_PATH } from '../../shared/github';
 import { REPOS_PAGE_SIZE, STARRED_PAGE_SIZE } from '../config';
 import type { GithubUser, Org, Repo, SocialAccount } from '../types/github';
 import { cached } from './cache';
-import { fetchJson } from './http';
+import { fetchJson, NotFoundError, type JsonResponse } from './http';
 
 const GITHUB_JSON = 'application/vnd.github+json';
 
@@ -53,7 +54,21 @@ interface ApiOrg {
   avatar_url: string;
 }
 
-const get = <T>(path: string) => fetchJson<T>(GITHUB_API_URL + path, { accept: GITHUB_JSON });
+/**
+ * GETs a REST path such as `/users/octo`. It asks the site's GitHub function first: with the server token, visitors
+ * share 5,000 requests per hour. If the function can't answer (not deployed, no token, GitHub unreachable or its
+ * quota used up), the browser asks GitHub directly, which allows 60 requests per hour per IP. A 404 is GitHub's own
+ * answer ("no such user"), so it isn't retried.
+ */
+async function get<T>(path: string): Promise<JsonResponse<T>> {
+  try {
+    return await fetchJson<T>(`${GITHUB_REST_PATH}?path=${encodeURIComponent(path)}`, { accept: GITHUB_JSON });
+  } catch (error) {
+    if (error instanceof NotFoundError) throw error;
+    return fetchJson<T>(GITHUB_API_URL + path, { accept: GITHUB_JSON });
+  }
+}
+
 const userPath = (username: string) => `/users/${encodeURIComponent(username)}`;
 // GitHub logins are case-insensitive, so cache keys are too.
 const cacheKey = (...parts: string[]) => parts.join(':').toLowerCase();
