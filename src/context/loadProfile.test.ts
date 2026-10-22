@@ -91,6 +91,15 @@ describe('loadProfile', () => {
   });
 
   describe('for shreeramk (the user the sample data describes)', () => {
+    it('shows the design’s organization when GitHub lists no public ones (the membership is private)', async () => {
+      stubFetch(liveGithub('shreeramk')); // live orgs: []
+      const state = await loadProfile('shreeramk');
+
+      if (state.status !== 'ready') throw new Error(`unexpected status ${state.status}`);
+      expect(state.orgs).toEqual(mockOrgs);
+      expect(state.failure).toBeUndefined(); // not a failure, so no banner
+    });
+
     it('falls back to sample data for every section when GitHub is unreachable', async () => {
       // setup.ts makes every fetch reject by default
       const state = await loadProfile('shreeramk');

@@ -55,12 +55,15 @@ export async function loadProfile(username: string): Promise<ProfileState> {
   }
 
   const value = <T>(result: PromiseSettledResult<T>, mock: T): T => (result.status === 'fulfilled' ? result.value : mock);
+  // GitHub's API lists only public org memberships. The design is the owner's view, which includes private ones
+  // (shreeramk's UptimeAI membership is private), so for users with sample data an empty list shows the sample orgs.
+  const liveOrgs = value(orgs, mockOrgs);
   return {
     status: 'ready',
     user: value(user, mockUser),
     repos: value(repos, mockRepos),
     socials: value(socials, mockSocials),
-    orgs: value(orgs, mockOrgs),
+    orgs: liveOrgs.length === 0 && hasMockProfile(username) ? mockOrgs : liveOrgs,
     starredCount: value(starredCount, mockStarredCount),
     extras: mockExtras(username),
     ...(errors.length > 0 && { failure: describeFailure(errors) }),

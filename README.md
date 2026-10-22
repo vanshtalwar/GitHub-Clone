@@ -2,7 +2,7 @@
 
 A responsive recreation of the GitHub profile page for [`shreeramk`](https://github.com/shreeramk), built for the UptimeAI UI assignment. The profile panel comes from GitHub's REST API. The contribution heatmap comes from GitHub's GraphQL API and is drawn with ECharts.
 
-**Live demo:** _add the Netlify URL here_
+**Live demo:** https://github-assessment-vansh.netlify.app
 
 ![Desktop screenshot](docs/screenshot-desktop.png)
 
@@ -99,7 +99,7 @@ heatmap    ─▶ useContributions(user, period) ─▶ loadContributions() ─�
 | Profile panel (name, bio, followers, company, location, blog, …) | **Live**: `GET /users/{u}` | Requirement 3b |
 | Social links (LinkedIn, X) | **Live**: `GET /users/{u}/social_accounts` | |
 | Popular repositories, Repositories tab | **Live**: `GET /users/{u}/repos` + `GET /repos/{owner}/{repo}` for "Forked from" | The list endpoint has no fork parent. A fork with no language shows its parent's, like github.com |
-| Organizations | **Live**: `GET /users/{u}/orgs` | Hidden when empty (shreeramk's memberships are private) |
+| Organizations | **Live**: `GET /users/{u}/orgs` | The API lists only public memberships. shreeramk's UptimeAI membership is private, and the design is the owner's view, so for shreeramk an empty list shows the design's org (sample data). For other users the section is hidden when empty. |
 | Stars count / Stars tab | **Live**: `GET /users/{u}/starred` (count from the `Link` header) | |
 | Contribution heatmap, year list | **Live**: GitHub GraphQL `contributionsCollection` (via the Netlify Function) | Requirement 3a; see below |
 | Achievements, status (🎯 Focusing), packages count | Mock | No public API |
