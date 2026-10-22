@@ -1,0 +1,36 @@
+.section {
+  margin-bottom: var(--space-4);
+}
+
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.title {
+  font-size: var(--font-size-md);
+  font-weight: 400;
+}
+
+.customize {
+  font-size: var(--font-size-xs);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+
+@media (min-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.empty {
+  color: var(--color-fg-muted);
+}

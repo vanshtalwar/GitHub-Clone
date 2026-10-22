@@ -1,0 +1,54 @@
+/* Phones/tablets: year pills above the graph. lg+: graph column + 112px sticky year column (design/00). */
+.section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'years'
+    'main';
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+@media (min-width: 1012px) {
+  .section {
+    grid-template-columns: minmax(0, 1fr) 112px;
+    grid-template-areas: 'main years';
+    column-gap: var(--space-5);
+  }
+}
+
+.main {
+  grid-area: main;
+  min-width: 0;
+}
+
+.years {
+  grid-area: years;
+  min-width: 0;
+}
+
+.headingRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 32px;
+  margin-bottom: var(--space-2);
+}
+
+.heading {
+  font-size: var(--font-size-md);
+  font-weight: 400;
+}
+
+.box {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.unavailable {
+  padding: var(--space-5) var(--space-3);
+  color: var(--color-fg-muted);
+  text-align: center;
+}

@@ -1,0 +1,55 @@
+/* Shared by the tab pages */
+.toolbar {
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-muted);
+}
+
+.filter {
+  width: 100%;
+  height: var(--control-size);
+  padding: 0 var(--space-3);
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.filter:focus-visible {
+  outline-offset: -1px;
+  border-color: var(--color-focus);
+}
+
+.status {
+  padding: var(--space-5) 0;
+  color: var(--color-fg-muted);
+  text-align: center;
+}
+
+/* "Showing N of M … View all on GitHub" under partial lists */
+.more {
+  padding: var(--space-3) 0;
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+/* Secondary button (Try again / Reload) */
+.button {
+  height: var(--control-size);
+  padding: 0 var(--space-3);
+  font-weight: 500;
+  color: var(--color-fg);
+  background: var(--color-btn-bg);
+  border: 1px solid var(--color-btn-border);
+  border-radius: var(--radius-md);
+}
+
+.button:hover {
+  background: var(--color-btn-hover-bg);
+}
+
+/* Full-page error (RouteErrorPage) */
+.errorPage {
+  width: 100%;
+  max-width: 720px;
+  padding: var(--space-6) var(--gutter-sm);
+  margin: 0 auto;
+}

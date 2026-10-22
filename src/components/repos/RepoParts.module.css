@@ -1,0 +1,34 @@
+.forked {
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.forked a {
+  color: var(--color-fg-muted);
+  text-decoration: underline;
+}
+
+.forked a:hover {
+  color: var(--color-link);
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.statLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-fg-muted);
+}
+
+.statLink:hover {
+  color: var(--color-link);
+  text-decoration: none;
+}

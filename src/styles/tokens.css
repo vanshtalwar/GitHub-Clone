@@ -1,0 +1,97 @@
+/*
+ * Design tokens — GitHub Primer, light theme.
+ * Every colour, size and radius used by components should come from here.
+ *
+ * Breakpoints (CSS variables can't be used inside @media, so use these numbers directly):
+ *   sm  544px
+ *   md  768px   sidebar 256px; page gutter 24px
+ *   lg  1012px  sidebar 296px; page gutter 32px; year list beside the graph
+ *   xl  1280px  page max width
+ * Below md the layout is a single column with 16px gutters.
+ */
+:root {
+  color-scheme: light;
+
+  /* Text */
+  --color-fg: #1f2328;
+  --color-fg-muted: #59636e;
+  --color-fg-on-emphasis: #ffffff;
+  --color-link: #0969da;
+
+  /* Surfaces */
+  --color-canvas: #ffffff;
+  --color-canvas-subtle: #f6f8fa; /* app header, buttons, inset areas */
+  --color-counter-bg: #818b981f;
+  --color-skeleton: #e6eaef;
+  --color-achievement-tier: #fae17d; /* "x4" label on achievement badges */
+  --color-tooltip-bg: #25292e;
+
+  /* Borders */
+  --color-border: #d1d9e0;
+  --color-border-muted: #d1d9e0b3;
+  --color-avatar-border: #1f232826;
+
+  /* Buttons */
+  --color-btn-bg: #f6f8fa;
+  --color-btn-hover-bg: #eff2f5;
+  --color-btn-border: #d1d9e0;
+
+  /* Accents */
+  --color-accent-emphasis: #0969da; /* selected year */
+  --color-underline-active: #fd8c73; /* active tab */
+  --color-success-emphasis: #1f883d; /* "open" PR badge */
+  --color-done-emphasis: #8250df; /* "merged" PR badge */
+  --color-attention: #9a6700; /* warning icon */
+  --color-attention-subtle: #fff8c5; /* warning banner background */
+  --color-attention-border: #d4a72c66;
+  --color-focus: #0969da;
+  --color-hover-bg: #818b981a; /* transparent buttons on hover */
+  --color-notification: #0969da; /* unread dot on the inbox button */
+
+  /* Contribution calendar, levels 0–4 (as returned by the contributions API) */
+  --color-calendar-l0: #eff2f5;
+  --color-calendar-l1: #aceebb;
+  --color-calendar-l2: #4ac26b;
+  --color-calendar-l3: #2da44e;
+  --color-calendar-l4: #116329;
+  --color-calendar-cell-border: #1f23280d;
+  --color-activity-axis: #1a7f37; /* activity overview cross chart */
+
+  /* Typography */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --font-size-xs: 12px;
+  --font-size-sm: 14px; /* body */
+  --font-size-md: 16px; /* section titles */
+  --font-size-lg: 20px; /* login */
+  --font-size-xl: 24px; /* display name */
+  --line-height: 1.5;
+
+  /* Spacing (4px scale) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 40px;
+
+  /* Radii */
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-pill: 2em;
+  --radius-full: 50%;
+
+  /* Shadows */
+  --shadow-resting: 0 1px 0 #1f23280a;
+  --shadow-overlay: 0 0 0 1px #d1d9e080, 0 6px 12px -3px #25292e0a, 0 6px 18px 0 #25292e1f;
+
+  /* Layout */
+  --control-size: 32px; /* header buttons, avatar, search box height */
+  --tabnav-height: 48px;
+  --container-max: 1280px;
+  --sidebar-width-md: 256px;
+  --sidebar-width-lg: 296px;
+  --gutter-sm: 16px;
+  --gutter-md: 24px;
+  --gutter-lg: 32px;
+}

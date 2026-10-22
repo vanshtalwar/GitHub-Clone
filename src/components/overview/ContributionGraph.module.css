@@ -1,0 +1,80 @@
+.graph {
+  padding: var(--space-2) var(--space-3);
+}
+
+.scroller {
+  overflow-x: auto;
+  transition: opacity 0.2s;
+}
+
+.busy {
+  opacity: 0.5;
+}
+
+/* Centred when there's spare width; auto margins become 0 when it overflows, so scrolling starts at the left */
+.chart {
+  margin: 0 auto;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  padding-left: 32px; /* line up with the first week column (day labels are 32px wide) */
+  margin-top: var(--space-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+}
+
+.learnMore {
+  color: var(--color-fg-muted);
+}
+
+.learnMore:hover {
+  color: var(--color-link);
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.legend > span:first-child {
+  margin-right: var(--space-1);
+}
+
+.legend > span:last-child {
+  margin-left: var(--space-1);
+}
+
+.legendCell {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  outline: 1px solid var(--color-calendar-cell-border);
+  outline-offset: -1px;
+}
+
+.unavailable {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--color-fg-muted);
+}
+
+.reload {
+  padding: 0;
+  font-weight: 600;
+  color: var(--color-link);
+  background: none;
+  border: 0;
+}
+
+.reload:hover {
+  text-decoration: underline;
+}

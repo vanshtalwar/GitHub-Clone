@@ -1,0 +1,17 @@
+# Netlify: Git-based and CLI deploys read this file. (If the repository root is the parent folder,
+# set "Base directory" to github-profile in the Netlify UI.)
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  # Vite 8 needs Node ^20.19 or >=22.12
+  NODE_VERSION = "22"
+
+[functions]
+  # netlify/functions/contributions.mts calls GitHub's GraphQL API for the heatmap (requirement 3a).
+  # It needs GITHUB_TOKEN: Site configuration → Environment variables.
+  directory = "netlify/functions"
+
+# The SPA fallback (deep links like /shreeramk/projects) lives in public/_redirects, which Vite copies into dist/.
+# /.netlify/functions/* is reserved by Netlify, so the fallback never shadows the function.

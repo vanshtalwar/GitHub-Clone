@@ -1,0 +1,44 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top > :last-child {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.forked {
+  margin-top: var(--space-1);
+}
+
+/* Grows so the language row sits at the bottom when cards in a row have different heights */
+.description {
+  flex: 1;
+  margin-top: var(--space-3);
+  font-size: var(--font-size-xs);
+  color: var(--color-fg-muted);
+  overflow-wrap: anywhere;
+}
+
+.stats {
+  margin-top: var(--space-3);
+}

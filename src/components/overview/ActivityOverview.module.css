@@ -1,0 +1,82 @@
+.overview {
+  padding: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  container-type: inline-size;
+}
+
+.orgs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.org {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px var(--space-2);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--color-fg);
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.org:hover {
+  text-decoration: none;
+  background: var(--color-canvas-subtle);
+}
+
+.org img {
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px var(--color-avatar-border);
+}
+
+/*
+ * Stacked when the panel is narrow; two columns with a divider (design/00) once the panel itself is wide enough.
+ * A container query, not a media query: at 1012px the viewport is wide but this panel isn't, and a squeezed
+ * chart would shrink its labels to ~8px.
+ */
+.columns {
+  display: grid;
+  gap: var(--space-3);
+}
+
+@container (min-width: 600px) {
+  .columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+  }
+
+  .summary {
+    padding-right: var(--space-3);
+  }
+
+  .chart {
+    padding-left: var(--space-3);
+    border-left: 1px solid var(--color-border-muted);
+  }
+}
+
+.title {
+  margin-bottom: var(--space-3);
+  font-weight: 400;
+}
+
+.contributed {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.icon {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: var(--color-fg-muted);
+}
+
+.repo {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}

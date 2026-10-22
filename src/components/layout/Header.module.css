@@ -1,0 +1,221 @@
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  background: var(--color-canvas-subtle);
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  margin-right: auto;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.iconButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--control-size);
+  height: var(--control-size);
+  padding: 0;
+  color: var(--color-fg-muted);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.iconButton:hover {
+  text-decoration: none;
+  background: var(--color-hover-bg);
+}
+
+/* Copilot: one link drawn as GitHub's split button (icon | caret) */
+.splitButton {
+  width: auto;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+}
+
+.splitDivider {
+  align-self: stretch;
+  width: 1px;
+  background: var(--color-border);
+}
+
+.createButton {
+  width: auto;
+  gap: var(--space-1);
+  padding: 0 var(--space-2);
+}
+
+.divider {
+  width: 1px;
+  height: 20px;
+  margin: 0 var(--space-1);
+  background: var(--color-border);
+}
+
+.unreadDot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 10px;
+  height: 10px;
+  background: var(--color-notification);
+  border: 2px solid var(--color-canvas-subtle);
+  border-radius: var(--radius-full);
+}
+
+.avatar {
+  display: block;
+  width: var(--control-size);
+  height: var(--control-size);
+  padding: 0;
+  overflow: hidden;
+  background: var(--color-border);
+  border: 0;
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 0 1px var(--color-avatar-border);
+}
+
+.avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.logo {
+  display: inline-flex;
+  color: var(--color-fg);
+}
+
+.context {
+  overflow: hidden;
+  font-weight: 600;
+  color: var(--color-fg);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Search */
+.search {
+  position: relative;
+  display: none;
+  align-items: center;
+  gap: var(--space-2);
+  height: var(--control-size);
+  padding: 0 var(--space-2);
+  color: var(--color-fg-muted);
+  cursor: text;
+  background: var(--color-canvas);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* Phones: opened by the search button, as a full-width row under the header */
+.searchOpen {
+  display: flex;
+  flex: 1 0 100%;
+  order: 3;
+}
+
+.search:focus-within {
+  border-color: var(--color-focus);
+  outline: 1px solid var(--color-focus);
+}
+
+.searchIcon {
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  color: var(--color-fg);
+  background: transparent;
+  border: 0;
+}
+
+.searchInput:focus-visible {
+  outline: none;
+}
+
+/* The real placeholder only shows while typing; otherwise the "Type / to search" hint does. */
+.searchInput::placeholder {
+  color: transparent;
+}
+
+.searchInput:focus::placeholder {
+  color: var(--color-fg-muted);
+}
+
+.searchHint {
+  position: absolute;
+  left: 32px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.searchInput:focus ~ .searchHint,
+.searchInput:not(:placeholder-shown) ~ .searchHint {
+  display: none;
+}
+
+.searchHint kbd {
+  display: inline-block;
+  padding: 0 5px;
+  font: 11px/16px var(--font-sans);
+  color: var(--color-fg-muted);
+  vertical-align: middle;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+/* Responsive visibility */
+.desktopOnly,
+.smUp {
+  display: none;
+}
+
+@media (min-width: 544px) {
+  .smUp {
+    display: inline-flex;
+  }
+}
+
+@media (min-width: 768px) {
+  .desktopOnly {
+    display: inline-flex;
+  }
+
+  .mobileOnly {
+    display: none;
+  }
+
+  .search,
+  .searchOpen {
+    display: flex;
+    flex: 0 1 200px;
+    order: 0;
+  }
+}
+
+@media (min-width: 1012px) {
+  .search,
+  .searchOpen {
+    flex-basis: 272px;
+  }
+}
