@@ -5,14 +5,15 @@ import { useProfile } from '../../hooks/useProfile';
 import { formatCount } from '../../utils/format';
 import styles from './TabNav.module.css';
 
-type CountKey = 'repos' | 'projects' | 'packages' | 'stars';
+type CountKey = 'repos' | 'projects' | 'stars';
 
 // Relative links: this renders inside the /:username layout route, so they work for any user.
 const TABS = [
   { to: '', label: 'Overview', icon: BookIcon },
   { to: 'repositories', label: 'Repositories', icon: RepoIcon, count: 'repos' },
   { to: 'projects', label: 'Projects', icon: TableIcon, count: 'projects' },
-  { to: 'packages', label: 'Packages', icon: PackageIcon, count: 'packages' },
+  // No counter: GitHub only lists packages to classic tokens, so the count can't be known
+  { to: 'packages', label: 'Packages', icon: PackageIcon },
   { to: 'stars', label: 'Stars', icon: StarIcon, count: 'stars' },
 ] as const satisfies readonly { to: string; label: string; icon: unknown; count?: CountKey }[];
 
@@ -34,8 +35,6 @@ export function TabNav({ className = '' }: { className?: string }) {
       ? {
           repos: profile.user.publicRepos,
           projects: profile.projects?.totalCount,
-          // No API for packages: only known where sample data exists
-          packages: profile.extras?.packagesCount,
           stars: profile.starredCount,
         }
       : {};

@@ -93,9 +93,7 @@ export const mockDetails: ProfileDetails = {
   projects: { totalCount: 0, items: [] },
 };
 
-// No usable public API for these: always mock.
-
-export const mockPackagesCount = 5;
+// No API for these: always mock.
 
 /** The three badges in the design screenshot (images in public/achievements/). */
 export const mockAchievements: Achievement[] = [
@@ -104,8 +102,8 @@ export const mockAchievements: Achievement[] = [
   { name: 'Pull Shark', image: '/achievements/pull-shark.png', tier: 'x4' },
 ];
 
-/** The parts with no usable public API (achievements, packages count), for users we have sample data for. */
+/** The parts with no API (achievements), for users we have sample data for. */
 export function mockExtras(username: string): ProfileExtras | null {
   if (!hasMockProfile(username)) return null;
-  return { achievements: mockAchievements, packagesCount: mockPackagesCount };
+  return { achievements: mockAchievements };
 }

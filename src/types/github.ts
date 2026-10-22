@@ -69,13 +69,11 @@ export interface Achievement {
 }
 
 /**
- * Profile parts with no usable public API: achievements have none, and GitHub only lists packages to classic tokens
- * with package access. Only available where sample data exists (shreeramk); null for everyone else, and the UI then
- * leaves those parts out.
+ * Profile parts with no API at all (achievements). Only available where sample data exists (shreeramk); null for
+ * everyone else, and the UI then leaves them out.
  */
 export interface ProfileExtras {
   achievements: Achievement[];
-  packagesCount: number;
 }
 
 /** "last" is the rolling last year (GitHub's default view); a number is that calendar year. */

@@ -111,7 +111,7 @@ activity   ─▶ useActivity(user, period)      ─▶ loadActivity()      ─�
 | Activity overview, contribution activity timeline | **Live**: GraphQL `contributionsCollection` per period and per month (via the activity function) | For shreeramk, GitHub only reveals a count: every contribution is in a private repository, which GitHub itemises only for the owner, and the design is the owner's view. So shreeramk shows the design's activity whenever the live data has nothing public |
 | Projects tab + counter | **Live**: GraphQL `user.projectsV2` | shreeramk has none, so it shows GitHub's empty state |
 | Achievements | Mock | No API at all (REST or GraphQL) |
-| Packages count / tab | Mock count; empty state | GitHub only lists packages to classic tokens with package permissions (fine-grained tokens get 0), so a "live" count would always be wrong |
+| Packages tab | Empty state, no counter | GitHub only lists packages to classic tokens with package permissions (fine-grained tokens get 0), so neither a list nor a count can be shown |
 
 **Fallback rules:**
 - A 404 shows "User not found".
@@ -202,7 +202,8 @@ The heatmap and the REST calls need the Netlify Functions, so deploy **from Git 
 - **Header controls.** Menu, Copilot, +, issues, pull requests, inbox and avatar link to the matching github.com pages, which ask the visitor to sign in. The search box works in the app.
 - **Owner-view elements.** "Edit profile" and "Customize your pins" follow the design's logged-in view and link to GitHub's profile settings and pinning docs.
 - **Partial lists.** The Repositories tab loads the 100 most recently updated repos, and Stars the 30 most recent, with a "View all on GitHub" note when there are more. For accounts with more than 100 repos, Popular repositories is chosen from those 100. Loading every page would spend the visitor's 60 calls per hour.
-- **Sample data.** Achievements have no API, and packages can't be read with a fine-grained token. They exist for shreeramk only (`profile.extras`) and are hidden for other users. shreeramk's activity is the design's, because GitHub only details it to the owner.
+- **Sample data.** Achievements have no API. They exist for shreeramk only (`profile.extras`) and are hidden for other users.
+- **Packages.** They can't be read with a fine-grained token, so the tab shows an empty state and no counter (the design's owner view shows 5). shreeramk's activity is the design's, because GitHub only details it to the owner.
 - **Activity timeline.** It covers commits, pull requests and the private count, the parts GitHub's timeline shows most. Issues and reviews count towards the overview's shares, but aren't listed as timeline entries. The organization chips link to the orgs; GitHub's per-org filtering needs data we don't have.
 - **Rate limit.** Without `GITHUB_TOKEN`, or once its 5,000/hour are used up, the browser calls GitHub directly, where heavy use from one IP can exhaust the 60/hour limit. The page then shows sample data (shreeramk) or an explanation (other users) until it resets.
 - **The heatmap needs `GITHUB_TOKEN` on the server.** Without it the contributions function answers 500, and the heatmap shows sample data (shreeramk) or "couldn't be loaded" (other users).

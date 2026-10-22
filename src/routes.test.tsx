@@ -59,7 +59,7 @@ describe('routes', () => {
     renderAt('/shreeramk');
     expect(await screen.findByRole('status')).toHaveTextContent('Showing sample data');
     expect(profileTabs().getByRole('link', { name: 'Repositories (31)' })).toBeInTheDocument();
-    expect(profileTabs().getByRole('link', { name: 'Packages (5)' })).toBeInTheDocument();
+    expect(profileTabs().getByRole('link', { name: 'Packages' })).toBeInTheDocument();
     expect(profileTabs().getByRole('link', { name: 'Stars (6)' })).toBeInTheDocument();
   });
 
